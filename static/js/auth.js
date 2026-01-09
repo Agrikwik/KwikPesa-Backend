@@ -1,61 +1,58 @@
- // Global mode management
-        function toggleAuth(mode) {
-            const forms = ['login-form', 'register-form', 'otp-section', 'forgot-form', 'reset-section'];
-            forms.forEach(id => document.getElementById(id).classList.add('hidden'));
+function toggleAuth(mode) {
+    const forms = ['login-form', 'register-form', 'otp-section', 'forgot-form', 'reset-section'];
+    forms.forEach(id => document.getElementById(id).classList.add('hidden'));
+    
+    const subtitle = document.getElementById('auth-subtitle');
+    
+    if(mode === 'login') {
+        document.getElementById('login-form').classList.remove('hidden');
+        subtitle.innerText = "Welcome back, Merchant";
+    } else if(mode === 'register') {
+        document.getElementById('register-form').classList.remove('hidden');
+        subtitle.innerText = "Join the KwachaPoint Network";
+    } else if(mode === 'forgot') {
+        document.getElementById('forgot-form').classList.remove('hidden');
+        subtitle.innerText = "Recover Account";
+    } else if(mode === 'reset') {
+        document.getElementById('reset-section').classList.remove('hidden');
+        subtitle.innerText = "Security Reset";
+    } else if(mode === 'otp') {
+        document.getElementById('otp-section').classList.remove('hidden');
+        subtitle.innerText = "Verify Your Email";
+    }
+}
 
-            const subtitle = document.getElementById('auth-subtitle');
-
-            if(mode === 'login') {
-                document.getElementById('login-form').classList.remove('hidden');
-                subtitle.innerText = "Welcome back, Merchant";
-            } else if(mode === 'register') {
-                document.getElementById('register-form').classList.remove('hidden');
-                subtitle.innerText = "Join the KwachaPoint Network";
-            } else if(mode === 'forgot') {
-                document.getElementById('forgot-form').classList.remove('hidden');
-                subtitle.innerText = "Recover Account";
-            } else if(mode === 'reset') {
-                document.getElementById('reset-section').classList.remove('hidden');
-                subtitle.innerText = "Security Reset";
-            } else if(mode === 'otp') {
-                document.getElementById('otp-section').classList.remove('hidden');
-                subtitle.innerText = "Verify Your Email";
-            }
+document.getElementById('login-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.innerText = "Checking...";
+            
+    const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value
+        })
+    });
+            
+    const data = await res.json();
+    if(res.ok) {
+        localStorage.setItem('kp_token', data.access_token);
+        // Try to get redirect URL from server, else default to dashboard
+        try {
+            redirectRes = await fetch('/redirect');
+            const redirectData = await redirectRes.json();
+            window.location.href = redirectData.redirect_url || '/dashboard';
+        } catch {
+            window.location.href = '/dashboard';
         }
+    } else {
+        alert(data.detail);
+        btn.innerText = "Sign In";
+    }
+};
 
-        // --- LOGIN LOGIC ---
-        document.getElementById('login-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            btn.innerText = "Checking...";
-            
-            const res = await fetch('/auth/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: document.getElementById('login-email').value,
-                    password: document.getElementById('login-password').value
-                })
-            });
-            
-            const data = await res.json();
-            if(res.ok) {
-                localStorage.setItem('kp_token', data.access_token);
-                // Try to get redirect URL from server, else default to dashboard
-                try {
-                    const redirectRes = await fetch('/redirect');
-                    const redirectData = await redirectRes.json();
-                    window.location.href = redirectData.redirect_url || '/dashboard';
-                } catch {
-                    window.location.href = '/dashboard';
-                }
-            } else {
-                alert(data.detail);
-                btn.innerText = "Sign In";
-            }
-        };
-
-        // --- REGISTER LOGIC ---
         document.getElementById('register-form').onsubmit = async (e) => {
             e.preventDefault();
             const res = await fetch('/auth/register', {
@@ -107,15 +104,12 @@
         }
 
         // --- VERIFY ACCOUNT LOGIC ---
-        async function verifyAccount() {
-            const email = document.getElementById('reg-email').value;
-            const code = document.getElementById('otp-code').value;
-            const res = await fetch(`/auth/verify-otp?email=${email}&code=${code}`, { method: 'POST' });
-            if(res.ok) {
-                alert("Verified! You can now sign in.");
-                toggleAuth('login');
-            } else alert("Invalid code.");
-        }
-    </script>
-</body>
-</html>
+async function verifyAccount() {
+    const email = document.getElementById('reg-email').value;
+    const code = document.getElementById('otp-code').value;
+    const res = await fetch(`/auth/verify-otp?email=${email}&code=${code}`, { method: 'POST' });
+    if(res.ok) {
+        alert("Verified! You can now sign in.");
+        toggleAuth('login');
+    } else alert("Invalid code.");
+};

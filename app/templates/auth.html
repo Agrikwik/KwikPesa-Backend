@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KwachaPoint | Secure Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-[#0a0a0c] text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-[#111114] border border-gray-800 rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">KwachaPoint</h1>
+            <p class="text-gray-500 text-sm mt-2" id="auth-subtitle">Welcome back, Merchant</p>
+        </div>
+
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="text-xs uppercase text-gray-500 font-bold">Email Address</label>
+                <input type="email" id="login-email" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none mt-1">
+            </div>
+            <div>
+                <div class="flex justify-between items-center">
+                    <label class="text-xs uppercase text-gray-500 font-bold">Password</label>
+                    <a href="#" onclick="toggleAuth('forgot')" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Forgot Password?</a>
+                </div>
+                <input type="password" id="login-password" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none mt-1">
+            </div>
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/20">Sign In</button>
+            <p class="text-center text-sm text-gray-500">New here? <a href="#" onclick="toggleAuth('register')" class="text-purple-400">Create Account</a></p>
+        </form>
+
+        <form id="register-form" class="space-y-4 hidden">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs uppercase text-gray-500 font-bold">Full Name</label>
+                    <input type="text" id="reg-name" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none mt-1 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs uppercase text-gray-500 font-bold">Personal Phone</label>
+                    <input type="tel" id="reg-phone" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none mt-1 text-sm">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs uppercase text-gray-500 font-bold">Email</label>
+                <input type="email" id="reg-email" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none mt-1">
+            </div>
+            <div>
+                <label class="text-xs uppercase text-gray-500 font-bold">Business Name</label>
+                <input type="text" id="reg-biz" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none mt-1">
+            </div>
+            <div>
+                <label class="text-xs uppercase text-gray-500 font-bold">Password</label>
+                <input type="password" id="reg-pass" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none mt-1">
+            </div>
+            <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-cyan-900/20">Register Merchant</button>
+            <p class="text-center text-sm text-gray-500">Already a partner? <a href="#" onclick="toggleAuth('login')" class="text-cyan-400">Login</a></p>
+        </form>
+
+        <form id="forgot-form" class="space-y-4 hidden">
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-key text-4xl text-purple-400 mb-2"></i>
+                <p class="text-sm text-gray-400">Enter your email and we'll send a reset code.</p>
+            </div>
+            <div>
+                <label class="text-xs uppercase text-gray-500 font-bold">Email Address</label>
+                <input type="email" id="forgot-email-input" required class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none mt-1">
+            </div>
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all">Send Reset Code</button>
+            <p class="text-center text-sm text-gray-500"><a href="#" onclick="toggleAuth('login')" class="text-purple-400">Back to Login</a></p>
+        </form>
+
+        <div id="reset-section" class="space-y-4 hidden">
+            <div class="text-center">
+                <p class="text-sm text-gray-400">Enter the 6-digit code and your new password.</p>
+            </div>
+            <input type="text" id="reset-otp" maxlength="6" placeholder="000000" class="w-full bg-black/50 border border-gray-800 p-4 rounded-xl text-center text-2xl tracking-[1em] focus:ring-2 focus:ring-purple-500 outline-none font-bold">
+            <input type="password" id="reset-new-pass" placeholder="New Password" class="w-full bg-black/50 border border-gray-800 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+            <button onclick="submitNewPassword()" class="w-full bg-cyan-600 text-black font-bold py-3 rounded-xl hover:bg-cyan-500 transition-colors">Update Password</button>
+        </div>
+
+        <div id="otp-section" class="space-y-4 hidden">
+            <div class="text-center">
+                <i class="fa-solid fa-envelope-open-text text-4xl text-cyan-400 mb-2"></i>
+                <p class="text-sm text-gray-400">Enter the 6-digit code sent to your email.</p>
+            </div>
+            <input type="text" id="otp-code" maxlength="6" placeholder="000000" class="w-full bg-black/50 border border-gray-800 p-4 rounded-xl text-center text-2xl tracking-[1em] focus:ring-2 focus:ring-cyan-500 outline-none font-bold">
+            <button onclick="verifyAccount()" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors">Verify & Complete</button>
+        </div>
+    </div>
+
+    <script>
+        // Global mode management
+        function toggleAuth(mode) {
+            const forms = ['login-form', 'register-form', 'otp-section', 'forgot-form', 'reset-section'];
+            forms.forEach(id => document.getElementById(id).classList.add('hidden'));
+
+            const subtitle = document.getElementById('auth-subtitle');
+
+            if(mode === 'login') {
+                document.getElementById('login-form').classList.remove('hidden');
+                subtitle.innerText = "Welcome back, Merchant";
+            } else if(mode === 'register') {
+                document.getElementById('register-form').classList.remove('hidden');
+                subtitle.innerText = "Join the KwachaPoint Network";
+            } else if(mode === 'forgot') {
+                document.getElementById('forgot-form').classList.remove('hidden');
+                subtitle.innerText = "Recover Account";
+            } else if(mode === 'reset') {
+                document.getElementById('reset-section').classList.remove('hidden');
+                subtitle.innerText = "Security Reset";
+            } else if(mode === 'otp') {
+                document.getElementById('otp-section').classList.remove('hidden');
+                subtitle.innerText = "Verify Your Email";
+            }
+        }
+
+        // --- LOGIN LOGIC ---
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "Checking...";
+            
+            const res = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: document.getElementById('login-email').value,
+                    password: document.getElementById('login-password').value
+                })
+            });
+            
+            const data = await res.json();
+            if(res.ok) {
+                localStorage.setItem('kp_token', data.access_token);
+                // Try to get redirect URL from server, else default to dashboard
+                try {
+                    const redirectRes = await fetch('/redirect');
+                    const redirectData = await redirectRes.json();
+                    window.location.href = redirectData.redirect_url || '/dashboard';
+                } catch {
+                    window.location.href = '/dashboard';
+                }
+            } else {
+                alert(data.detail);
+                btn.innerText = "Sign In";
+            }
+        };
+
+        // --- REGISTER LOGIC ---
+        document.getElementById('register-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const res = await fetch('/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: document.getElementById('reg-email').value,
+                    password: document.getElementById('reg-pass').value,
+                    full_name: document.getElementById('reg-name').value,
+                    personal_phone: document.getElementById('reg-phone').value,
+                    business_name: document.getElementById('reg-biz').value
+                })
+            });
+            if(res.ok) toggleAuth('otp');
+            else alert("Error: " + (await res.json()).detail);
+        };
+
+        // --- FORGOT PASSWORD LOGIC ---
+        document.getElementById('forgot-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email-input').value;
+            const res = await fetch('/auth/forgot-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email: email })
+            });
+            if(res.ok) {
+                alert("Reset code sent!");
+                toggleAuth('reset');
+            } else alert("Error sending code.");
+        };
+
+        // --- RESET PASSWORD SUBMISSION ---
+        async function submitNewPassword() {
+            const email = document.getElementById('forgot-email-input').value; // Retreive from the forgot input
+            const res = await fetch('/auth/reset-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: email,
+                    otp_code: document.getElementById('reset-otp').value,
+                    new_password: document.getElementById('reset-new-pass').value
+                })
+            });
+            if(res.ok) {
+                alert("Success! Password updated.");
+                toggleAuth('login');
+            } else alert("Verification failed.");
+        }
+
+        // --- VERIFY ACCOUNT LOGIC ---
+        async function verifyAccount() {
+            const email = document.getElementById('reg-email').value;
+            const code = document.getElementById('otp-code').value;
+            const res = await fetch(`/auth/verify-otp?email=${email}&code=${code}`, { method: 'POST' });
+            if(res.ok) {
+                alert("Verified! You can now sign in.");
+                toggleAuth('login');
+            } else alert("Invalid code.");
+        }
+    </script>
+</body>
+</html>
