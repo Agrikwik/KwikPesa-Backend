@@ -4,12 +4,12 @@ import asyncio
 from fastapi import APIRouter, Background_Tasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.api.deps import get_db # Ensure this matches your dependency path
+from app.api.deps import get_db
 
 router = APIRouter()
 
 # --- CONFIGURATION ---
-MNO_STK_ENDPOINT = "https://api.airtel.com/v1/payments/stk-push"
+MNO_STK_ENDPOINT = "https://kwachapoint.free.beeceptor.com/v1/stk/push"
 
 # --- HELPER FUNCTIONS ---
 
@@ -39,13 +39,13 @@ async def send_to_mno(phone: str, amount: float, ref: str):
             "msisdn": phone,
             "amount": amount,
             "external_id": ref,
-            "callback_url": "https://kwachapoint.com/api/webhooks/mno"
+            "callback_url": "https://kwachapoint.onrender.com/api/webhook"
         }
         headers = {"Authorization": "Bearer MNO_ACCESS_TOKEN"}
         try:
             await client.post(MNO_STK_ENDPOINT, json=data, headers=headers)
         except Exception as e:
-            print(f"❌ MNO Network Error: {e}")
+            print(f"MNO Network Error: {e}")
 
 # --- API ENDPOINTS ---
 
@@ -53,7 +53,7 @@ async def send_to_mno(phone: str, amount: float, ref: str):
 async def initiate_stk_push(payload: dict, background_tasks: Background_Tasks, db: Session = Depends(get_db)):
     customer_phone = payload.get("phone")
     amount = payload.get("amount")
-    merchant_id = payload.get("merchant_id", "00000000-0000-0000-0000-000000000001") # Default for testing
+    merchant_id = payload.get("merchant_id", "00000000-0000-0000-0000-000000000000") # Default for testing
     
     if not customer_phone or not amount:
         raise HTTPException(status_code=400, detail="Missing phone or amount")

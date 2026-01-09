@@ -1,7 +1,3 @@
-
-
-
-
 import os
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -10,19 +6,23 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
+
 # Internal Imports
 from app.api.deps import get_db
 from app.api.webhooks import router as webhook_router
 from app.api.checkout import router as checkout_router
 from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
+from app.core.database import engine, Base
 
 app = FastAPI(title="KwachaPoint Payment Gateway", version="1.0.0")
+Base.metadata.create_all(bind=engine)
 
 # Setup Static Files & Templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
 
 # Include Routers
 app.include_router(auth_router, tags=["Authentication"])

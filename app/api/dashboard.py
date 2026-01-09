@@ -72,14 +72,11 @@ async def generate_keys(
 
 @router.get("/api/stats")
 async def get_dashboard_stats(db: Session = Depends(get_db)):
-    # Keep as is for now - you mentioned we'll secure Admin later
     volume = db.execute(text("SELECT SUM(credit) FROM ledger.ledger_entries WHERE account_id = '00000000-0000-0000-0000-000000000001'")).scalar() or 0
-    # ... rest of admin logic ...
     return {"volume": float(volume), "profit": 0, "health": "98.5%"}
 
 @router.get("/api/transactions")
 async def get_recent_transactions(q: str = None, db: Session = Depends(get_db)):
-    # ... admin transaction view ...
     return []
 
 @router.post("/api/merchant/create-link")
@@ -102,4 +99,4 @@ async def create_payment_link(
     })
     db.commit()
     
-    return {"url": f"http://yourdomain.com/pay/{short_code}"}
+    return {"url": f"https://kwikpesa.onrender.com/{short_code}"}

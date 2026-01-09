@@ -25,5 +25,4 @@ async def create_link(amount: float, description: str, db: Session = Depends(get
     })
     db.commit()
     
-    # Once the API's have been collected, use actual domain
-    return {"url": f"http://127.0.0.1:8000/pay/{code}"}
+    return {"url": f"https://kwikpesa.onrender.com/{code}"}

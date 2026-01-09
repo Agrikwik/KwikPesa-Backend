@@ -34,16 +34,15 @@ class CheckoutService:
         return tx_ref
 
     async def process_with_retry(self, tx_id: str, provider_name: str, destination: str, amount: Decimal, attempt: int = 1):
-        """The Background Brain: Handles Provider API + Retries + Commission Split."""
         MAX_RETRIES = 3
         provider = self.providers.get(provider_name.lower())
 
         if not provider:
-            print(f"❌ Error: Unsupported provider {provider_name}")
+            print(f"Error: Unsupported provider {provider_name}")
             return
 
         try:
-            print(f"🚀 [Attempt {attempt}] Calling {provider_name} for {tx_id}...")
+            print(f"[Attempt {attempt}] Calling {provider_name} for {tx_id}...")
             
             # 1. Trigger the actual USSD/Bank API
             result = await provider.trigger_ussd_push(destination, amount, tx_id)
@@ -56,8 +55,6 @@ class CheckoutService:
                     {"id": tx_id}
                 ).fetchone()
 
-                # 🏆 TRIGGER THE TRIPLE-ENTRY COMMISSION ENGINE
-                # This handles Merchant credit, KP revenue, and Provider expense
                 CommissionService.apply_commission(
                     self.db, 
                     transaction_id=tx_id, 
@@ -65,7 +62,7 @@ class CheckoutService:
                     provider=provider_name.upper(), 
                     total_amount=amount
                 )
-                print(f"✅ {tx_id} fully processed and split.")
+                print(f"{tx_id} fully processed and split.")
             
             else:
                 # API responded but transaction is waiting for User PIN
@@ -73,17 +70,17 @@ class CheckoutService:
                     "UPDATE ledger.transactions SET status = 'PROCESSING' WHERE id = :id"
                 ), {"id": tx_id})
                 self.db.commit()
-                print(f"⏳ {tx_id} waiting for user PIN.")
+                print(f"{tx_id} waiting for user PIN.")
 
         except Exception as e:
             if attempt < MAX_RETRIES:
-                # 🔄 Exponential Backoff: 30s, 60s, 90s
+                # Exponential Backoff: 30s, 60s, 90s
                 wait_time = 30 * attempt 
-                print(f"⚠️ {tx_id} API failure: {str(e)}. Retrying in {wait_time}s...")
+                print(f"{tx_id} API failure: {str(e)}. Retrying in {wait_time}s...")
                 await asyncio.sleep(wait_time)
                 await self.process_with_retry(tx_id, provider_name, destination, amount, attempt + 1)
             else:
-                print(f"❌ {tx_id} failed after {MAX_RETRIES} attempts.")
+                print(f"{tx_id} failed after {MAX_RETRIES} attempts.")
                 self.db.execute(text(
                     "UPDATE ledger.transactions SET status = 'FAILED' WHERE id = :id"
                 ), {"id": tx_id})

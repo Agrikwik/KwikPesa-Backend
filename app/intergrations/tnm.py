@@ -7,7 +7,7 @@ class TNMMpambaProvider(BasePaymentProvider):
     async def trigger_ussd_push(self, phone: str, amount: Decimal, tx_ref: str):
         self.logger.info(f"[TNM] Initiating Mpamba Push for {phone}")
         
-        url = f"{settings.MOCK_GATEWAY_URL}/tnm/push"
+        url = f"{settings.MOCK_GATEWAY_URL}/v1/stk/push"
         payload = {
             "msisdn": self.normalize_phone(phone),
             "amount": str(amount),
