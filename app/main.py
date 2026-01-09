@@ -6,7 +6,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-
 # Internal Imports
 from app.api.deps import get_db
 from app.api.webhooks import router as webhook_router
@@ -87,3 +86,10 @@ async def not_found_handler(request: Request, exc: Exception):
         status_code=404, 
         content={"message": "The page or endpoint you are looking for does not exist."}
     )
+
+def init_db():
+    with engine.connect() as connection:
+        connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
+        connection.commit()
+    Base.metadata.create_all(bind=engine)
+init_db()
