@@ -1,4 +1,3 @@
-# Python 2026
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,22 +8,15 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
-# Environment Variables & Secrets (CRITICAL for security)
 .env
 .venv
 *.env
 database.ini
 secrets.json
-
-# Database & SQL
 *.sql
 *.sqlite3
-# Ignore local PostgreSQL data folders if stored in-project
 pg_data/
 postgres_data/
-
-# IDEs and OS
 .vscode/
 .idea/
 .DS_Store
