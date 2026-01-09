@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KwachaPoint Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-[#0b0e14] text-white font-sans">
+    <div class="flex h-screen">
+        <div class="w-64 bg-[#161b22] p-6 border-r border-gray-800">
+            <h1 class="text-2xl font-bold text-cyan-400 mb-10">KwachaPoint</h1>
+            <nav class="space-y-4">
+                <button onclick="showSection('main-stats')" class="w-full text-left p-3 hover:bg-gray-800 rounded transition-colors">Dashboard</button>
+                <a href="#" class="block p-3 hover:bg-gray-800 rounded">Transactions</a>
+                <button onclick="showSection('ledger-section')" class="w-full text-left p-3 hover:bg-gray-800 rounded transition-colors">Ledger History</button>
+            </nav>
+        </div>
+
+        <main class="flex-1 p-8 overflow-y-auto">
+            <div class="mb-4 relative">
+                <div class="flex flex-col md:flex-row gap-4 mb-6 items-center justify-between">
+    <div class="relative w-full md:w-2/3">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+        </div>
+        <input 
+            type="text" id="txSearch" onkeyup="filterTransactions()"
+            placeholder="Search transactions..." 
+            class="block w-full pl-10 pr-3 py-2 bg-[#161b22] border border-gray-700 rounded-lg text-gray-300 focus:ring-2 focus:ring-cyan-500 outline-none"
+        >
+    </div>
+
+    <button 
+        onclick="downloadCSV()" 
+        class="flex items-center gap-2 px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg transition-all shadow-lg shadow-cyan-900/20 active:scale-95"
+    >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        Export CSV
+    </button>
+</div>
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="p-6 bg-[#161b22] border border-cyan-500/30 rounded-xl">
+                    <p class="text-gray-400 text-sm">Available System Volume</p>
+                    <h2 id="vol" class="text-3xl font-bold mt-2 text-cyan-400">0.00 <span class="text-xs">MWK</span></h2>
+                </div>
+                <div class="p-6 bg-[#161b22] border border-purple-500/30 rounded-xl">
+                    <p class="text-gray-400 text-sm">Total Ecosystem Net Profit</p>
+                    <h2 id="profit" class="text-3xl font-bold mt-2 text-purple-400">0.00 <span class="text-xs">MWK</span></h2>
+                </div>
+                <div class="p-6 bg-[#161b22] border border-green-500/30 rounded-xl">
+                    <p class="text-gray-400 text-sm">System Health</p>
+                    <h2 id="health" class="text-3xl font-bold mt-2 text-green-400">--%</h2>
+                </div>
+            </div>
+
+            <div class="bg-[#161b22] p-6 rounded-xl border border-gray-800 mb-8">
+                <h3 class="mb-4 font-semibold text-gray-400">Transaction Volume Over Time</h3>
+                <canvas id="volChart" height="100"></canvas>
+            </div>
+
+            <div class="bg-[#161b22] rounded-xl border border-gray-800 overflow-hidden">
+    <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+        <h3 class="font-semibold text-gray-400 text-lg">Live Transaction Feed</h3>
+        <span class="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-[#0b0e14] text-gray-500 uppercase text-xs">
+                <tr>
+                    <th class="px-6 py-4">TX ID</th>
+                    <th class="px-6 py-4">Amount</th>
+                    <th class="px-6 py-4">Destination</th>
+                    <th class="px-6 py-4">Provider</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Time</th>
+                </tr>
+            </thead>
+            <tbody id="tx-body" class="divide-y divide-gray-800 text-sm">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<br><br>
+<div id="ledger-section" class="hidden animate-fade-in">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-white">Merchant & Internal Ledger</h2>
+        <button onclick="downloadLedgerCSV()" class="text-sm text-cyan-400 hover:underline">Export Ledger</button>
+    </div>
+
+    <div class="bg-[#161b22] rounded-xl border border-gray-800 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-[#0b0e14] text-gray-500 uppercase text-xs">
+                <tr>
+                    <th class="px-6 py-4">Date/Time</th>
+                    <th class="px-6 py-4">Account</th>
+                    <th class="px-6 py-4">TX Reference</th>
+                    <th class="px-6 py-4 text-right">Debit (MWK)</th>
+                    <th class="px-6 py-4 text-right">Credit (MWK)</th>
+                </tr>
+            </thead>
+            <tbody id="ledger-body" class="divide-y divide-gray-800 text-sm">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+        </main>
+    </div>
+
+    <script>
+    async function refreshData() {
+        try {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+        
+            document.getElementById('vol').innerText = `${data.volume.toLocaleString()} MWK`;
+            document.getElementById('profit').innerText = `${data.profit.toLocaleString()} MWK`;
+        
+            myChart.data.datasets[0].data.push(data.volume);
+            myChart.data.labels.push(new Date().toLocaleTimeString());
+            myChart.update();
+        } catch (err) {
+            console.error("Dashboard sync error:", err);
+        }
+    }
+
+    setInterval(refreshData, 5000);
+
+        async function updateDashboard() {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            
+            document.getElementById('vol').innerText = data.volume.toLocaleString() + " MWK";
+            document.getElementById('profit').innerText = data.profit.toLocaleString() + " MWK";
+            document.getElementById('health').innerText = data.health;
+        }
+
+        const ctx = document.getElementById('volChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '11:00', '12:00', '13:00', '14:00'],
+                datasets: [{
+                    label: 'Volume',
+                    data: [12000, 15000, 13000, 18000, 15200],
+                    borderColor: '#22d3ee',
+                    tension: 0.4
+                }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+
+        setInterval(updateDashboard, 5000);
+        updateDashboard();
+
+
+async function updateLedger() {
+    const response = await fetch('/api/ledger-history');
+    const data = await response.json();
+    const tbody = document.getElementById('ledger-body');
+    
+    tbody.innerHTML = data.map(entry => `
+        <tr class="hover:bg-gray-800/40 transition-all">
+            <td class="px-6 py-4 text-gray-500">${entry.date}</td>
+            <td class="px-6 py-4 font-semibold text-gray-300">${entry.account}</td>
+            <td class="px-6 py-4 font-mono text-xs text-cyan-500">${entry.tx_id}</td>
+            <td class="px-6 py-4 text-right ${entry.debit > 0 ? 'text-red-400' : 'text-gray-600'}">
+                ${entry.debit > 0 ? '-' + entry.debit.toLocaleString() : '0.00'}
+            </td>
+            <td class="px-6 py-4 text-right ${entry.credit > 0 ? 'text-cyan-400' : 'text-gray-600'}">
+                ${entry.credit > 0 ? '+' + entry.credit.toLocaleString() : '0.00'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+    async function updateTransactions() {
+        const response = await fetch('/api/transactions');
+        const txs = await response.json();
+        const tbody = document.getElementById('tx-body');
+        
+        tbody.innerHTML = txs.map(tx => `
+            <tr class="hover:bg-gray-800/50 transition-colors">
+                <td class="px-6 py-4 font-mono text-cyan-400">${tx.id}</td>
+                <td class="px-6 py-4 font-bold">${tx.amount} MWK</td>
+                <td class="px-6 py-4 text-gray-400">${tx.destination}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 rounded text-xs bg-gray-700 text-white">
+                        ${tx.provider}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                        tx.status === 'SUCCESS' ? 'bg-green-500/10 text-green-500' : 
+                        tx.status === 'FAILED' ? 'bg-red-500/10 text-red-500' : 
+                        'bg-yellow-500/10 text-yellow-500'
+                    }">
+                        ● ${tx.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-gray-500">${tx.time}</td>
+            </tr>
+        `).join('');
+    }
+
+
+    function filterTransactions() {
+        const input = document.getElementById("txSearch");
+        const filter = input.value.toLowerCase();
+        const tbody = document.getElementById("tx-body");
+        const rows = tbody.getElementsByTagName("tr");
+
+        for (let i = 0; i < rows.length; i++) {
+            const rowText = rows[i].textContent.toLowerCase();
+            if (rowText.includes(filter)) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    }
+
+    function downloadCSV() {
+    const tbody = document.getElementById("tx-body");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    
+    let csvContent = "TX ID,Amount,Destination,Provider,Status,Time\n";
+
+    rows.forEach(row => {
+        if (row.style.display !== "none") {
+            const cols = Array.from(row.querySelectorAll("td")).map(td => {
+                return `"${td.innerText.trim().replace(/\n/g, "")}"`;
+            });
+            csvContent += cols.join(",") + "\n";
+        }
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `KwachaPoint_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function showSection(sectionId) {
+    document.getElementById('dashboard-main-section').classList.add('hidden');
+    document.getElementById('ledger-section').classList.add('hidden');
+    
+    document.getElementById(sectionId).classList.remove('hidden');
+    
+    if(sectionId === 'ledger-section') updateLedger();
+}
+
+function showSection(sectionId) {
+    const sections = ['main-stats', 'ledger-section'];
+
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.classList.remove('hidden');
+    }
+
+
+    if (sectionId === 'ledger-section') {
+        updateLedger(); 
+    }
+}
+
+</script>
+</body>
+</html>

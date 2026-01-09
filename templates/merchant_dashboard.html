@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merchant Portal | KwachaPoint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-[#0b0e14] text-white font-sans flex h-screen">
+
+    <script>
+        const token = localStorage.getItem('kp_token');
+        if (!token) {
+            // No token? Send them back to login immediately
+            window.location.href = '/login';
+        }
+
+        // Helper function for secure authorized requests
+        async function secureFetch(url, options = {}) {
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            const response = await fetch(url, { ...options, headers });
+            
+            if (response.status === 401) {
+                // Token expired or invalid
+                localStorage.removeItem('kp_token');
+                window.location.href = '/login';
+                return null;
+            }
+            return response;
+        }
+    </script>
+
+    <div class="w-64 bg-[#161b22] p-6 border-r border-gray-800 flex flex-col">
+        <h1 class="text-2xl font-bold text-cyan-400 mb-10">KwachaPoint</h1>
+        <nav class="space-y-4 flex-1">
+            <button class="w-full text-left p-3 bg-gray-800 text-cyan-400 rounded transition-colors font-semibold">Dashboard</button>
+            <a href="#" class="block p-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded transition-colors">Transactions</a>
+        </nav>
+        <button onclick="logout()" class="p-3 text-red-400 hover:bg-red-900/20 rounded text-left text-sm">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i> Sign Out
+        </button>
+    </div>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="p-6 bg-[#161b22] border border-cyan-500/30 rounded-xl">
+                <p class="text-gray-400 text-sm">Available Balance</p>
+                <h2 id="balance" class="text-3xl font-bold mt-2 text-cyan-400">0.00 <span class="text-xs">MWK</span></h2>
+            </div>
+            <div class="p-6 bg-[#161b22] border border-green-500/30 rounded-xl">
+                <p class="text-gray-400 text-sm">Today's Sales</p>
+                <h2 id="sales" class="text-3xl font-bold mt-2 text-green-400">0.00 <span class="text-xs">MWK</span></h2>
+            </div>
+            <div class="p-6 bg-[#161b22] border border-yellow-500/30 rounded-xl">
+                <p class="text-gray-400 text-sm">Successful Payments</p>
+                <h2 id="success_rate" class="text-3xl font-bold mt-2 text-yellow-400">0%</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-[#161b22] p-8 rounded-xl border border-gray-800">
+                <h3 class="text-gray-400 font-semibold mb-6">Quick Actions</h3>
+                <div class="space-y-4">
+                    <button onclick="handleGenerateKeys()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-cyan-900/20 active:scale-95">Generate API Key</button>
+                    <button onclick="togglePaymentTool()" class="w-full bg-gray-800 hover:bg-gray-700 text-purple-400 border border-purple-500/30 py-3 rounded-lg transition-all active:scale-95">Open Payment Tool</button>
+                </div>
+            </div>
+            
+            <div class="bg-[#161b22] p-8 rounded-xl border border-gray-800 flex flex-col items-center">
+                <h3 class="text-gray-400 font-semibold mb-4 self-start">Sales Breakdown</h3>
+                <div class="w-48 h-48">
+                    <canvas id="salesDonut"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-[#161b22] rounded-xl border border-gray-800 overflow-hidden">
+            <div class="p-6 flex justify-between items-center border-b border-gray-800">
+                <h3 class="font-semibold text-gray-400 text-lg">Recent Transactions</h3>
+                <button onclick="downloadCSV()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors">Export CSV</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-[#0b0e14] text-gray-500 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-4">TX ID</th>
+                            <th class="px-6 py-4">Amount</th>
+                            <th class="px-6 py-4">Customer Phone</th>
+                            <th class="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tx-body" class="divide-y divide-gray-800 text-sm text-gray-300">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="paymentToolModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-[#161b22] p-8 rounded-xl max-w-2xl w-full border border-gray-700 relative shadow-2xl">
+            <button onclick="togglePaymentTool()" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl">&times;</button>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Smart Pay Tool</h3>
+                <div class="flex bg-[#0b0e14] p-1 rounded-lg border border-gray-800">
+                    <button onclick="setPayMode('link')" id="mode-link" class="px-4 py-2 rounded text-xs font-bold bg-cyan-600 text-white transition-all">PAYMENT LINK</button>
+                    <button onclick="setPayMode('stk')" id="mode-stk" class="px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all">REMOTE PUSH</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-gray-500 uppercase">Amount (MWK)</label>
+                    <input type="number" id="pay_amount" placeholder="5000" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">
+                </div>
+                <div id="input-context">
+                    <label class="text-xs text-gray-500 uppercase">Description</label>
+                    <input type="text" id="pay_desc" placeholder="Order #123" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">
+                </div>
+            </div>
+            <button onclick="executeSmartPay()" id="mainPayBtn" class="w-full mt-6 py-4 bg-cyan-600 hover:bg-cyan-500 rounded-lg font-bold text-white transition-all shadow-lg shadow-cyan-900/20 active:scale-95">GENERATE LINK</button>
+            <div id="smart-result" class="hidden mt-6 p-4 bg-[#0b0e14] rounded-lg border border-gray-800 text-center"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'link';
+
+        function logout() {
+            localStorage.removeItem('kp_token');
+            window.location.href = '/login';
+        }
+
+        function togglePaymentTool() {
+            document.getElementById('paymentToolModal').classList.toggle('hidden');
+        }
+
+        function setPayMode(mode) {
+            currentMode = mode;
+            const btn = document.getElementById('mainPayBtn');
+            const contextDiv = document.getElementById('input-context');
+            const modeLink = document.getElementById('mode-link');
+            const modeStk = document.getElementById('mode-stk');
+
+            if (mode === 'stk') {
+                contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Customer Phone</label>
+                    <input type="tel" id="pay_phone" placeholder="088/099..." class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-white mt-1">`;
+                btn.innerText = "INITIATE PIN POPUP";
+                btn.className = btn.className.replace('bg-cyan-600', 'bg-purple-600');
+                modeStk.className = "px-4 py-2 rounded text-xs font-bold bg-purple-600 text-white transition-all";
+                modeLink.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
+            } else {
+                contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Description</label>
+                    <input type="text" id="pay_desc" placeholder="Order #123" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">`;
+                btn.innerText = "GENERATE LINK";
+                btn.className = btn.className.replace('bg-purple-600', 'bg-cyan-600');
+                modeLink.className = "px-4 py-2 rounded text-xs font-bold bg-cyan-600 text-white transition-all";
+                modeStk.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
+            }
+        }
+
+        async function secureFetch(url, options = {}) {
+            const token = localStorage.getItem('access_token');
+            
+            // If no token, redirect to login immediately
+            if (!token) {
+                window.location.href = '/login';
+                return null;
+}
+
+    // Prepare headers
+    const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(url, { ...options, headers });
+
+    // Handle the "Kicked Out" scenario (Expired or Invalid Token)
+    if (response.status === 401) {
+        console.error("Session expired or unauthorized. Redirecting...");
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+        return null;
+    }
+
+    return response;
+}
+
+        // UPDATED: Includes Token for STK
+        async function initiateRemotePush(amount, phone) {
+            const response = await secureFetch('/v1/checkout/initiate-stk', {
+                method: 'POST',
+                body: JSON.stringify({ phone: phone, amount: parseFloat(amount) })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                document.getElementById('smart-result').innerHTML = `<div class="text-purple-400"><p class="font-bold">STK Push Sent!</p></div>`;
+            } else { throw new Error(data.detail); }
+        }
+
+        // UPDATED: Includes Token for Link
+        async function generateLink(amount, desc) {
+            const response = await secureFetch('/api/merchant/create-link', {
+                method: 'POST',
+                body: JSON.stringify({ amount: parseFloat(amount), description: desc })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                document.getElementById('smart-result').innerHTML = `<div class="text-cyan-400 p-2 font-mono text-sm">${data.url}</div>`;
+            } else { throw new Error("Failed"); }
+        }
+
+        async function executeSmartPay() {
+            const amount = document.getElementById('pay_amount').value;
+            const btn = document.getElementById('mainPayBtn');
+            const resultDiv = document.getElementById('smart-result');
+            
+            btn.disabled = true;
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = `<p class="animate-pulse">Authorizing...</p>`;
+
+            try {
+                if (currentMode === 'link') {
+                    await generateLink(amount, document.getElementById('pay_desc').value);
+                } else {
+                    await initiateRemotePush(amount, document.getElementById('pay_phone').value);
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="text-red-400">${err.message}</p>`;
+            } finally { btn.disabled = false; }
+        }
+
+        // Chart Init
+        const ctx = document.getElementById('salesDonut').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Airtel', 'TNM'],
+                datasets: [{
+                    data: [70, 30],
+                    backgroundColor: ['#22d3ee', '#a855f7'],
+                    borderWidth: 0
+                }]
+            },
+            options: { cutout: '75%', plugins: { legend: { display: false } } }
+        });
+
+        setInterval(fetchStats, 10000);
+        fetchStats();
+    </script>
+</body>
+</html>
