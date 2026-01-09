@@ -14,14 +14,25 @@ from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
 from app.core.database import engine, Base
 
+# --- DATABASE INITIALIZATION ---
+def init_db():
+    with engine.connect() as connection:
+        # Create the schema first!
+        connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
+        connection.commit()
+    # Now it is safe to create the tables
+    Base.metadata.create_all(bind=engine)
+
+# Run the initialization BEFORE creating the FastAPI app instance
+init_db()
+
 app = FastAPI(title="KwachaPoint Payment Gateway", version="1.0.0")
-Base.metadata.create_all(bind=engine)
 
 # Setup Static Files & Templates
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Ensure your static and templates folders are in the root directory
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
 
 # Include Routers
 app.include_router(auth_router, tags=["Authentication"])
@@ -30,7 +41,7 @@ app.include_router(webhook_router, prefix="/v1/webhooks", tags=["Webhooks"])
 app.include_router(dashboard_router, tags=["Admin"])
 app.include_router(dashboard_router, prefix="/api/merchant", tags=["Dashboard"])
 
-# --- UI ROUTES ---
+
 
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
@@ -86,10 +97,3 @@ async def not_found_handler(request: Request, exc: Exception):
         status_code=404, 
         content={"message": "The page or endpoint you are looking for does not exist."}
     )
-
-def init_db():
-    with engine.connect() as connection:
-        connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
-        connection.commit()
-    Base.metadata.create_all(bind=engine)
-init_db()
