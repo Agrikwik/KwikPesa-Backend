@@ -21,6 +21,7 @@ from jose import JWTError, jwt
 import os
 from sqlalchemy import text
 import resend
+from pydantic import BaseModel
 
 
 router = APIRouter()
@@ -29,6 +30,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 SECRET_KEY = os.getenv("SECRET_KEY", "KWACHAPOINT_SUPER_SECRET_KEY_2026")
 ALGORITHM = "HS256"
 resend.api_key = os.getenv("RESEND_API_KEY")
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    code: str
 
 def send_otp_email(target_email: str, otp_code: str):
     print(f"DEBUG: Attempting to send OTP {otp_code} to {target_email} via Resend API")
@@ -53,7 +58,6 @@ def send_otp_email(target_email: str, otp_code: str):
         
     except Exception as e:
         print(f"ERROR: Resend API failed: {e}")
-
 
 @router.post("/auth/register")
 async def register_merchant(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -83,6 +87,8 @@ async def register_merchant(user_data: UserCreate, background_tasks: BackgroundT
 
     return {"message": "OTP sent to email. Please verify to complete registration."}
 
+
+"""
 @router.post("/auth/verify-otp")
 async def verify_otp(email: str, code: str, db: Session = Depends(get_db)):
     otp_record = db.query(OTP).filter(
@@ -101,6 +107,33 @@ async def verify_otp(email: str, code: str, db: Session = Depends(get_db)):
     
     db.commit()
     return {"message": "Account verified successfully. You can now login."}
+"""
+
+@router.post("/auth/verify-otp")
+async def verify_otp(payload: VerifyOTPRequest, db: Session = Depends(get_db)):
+    # 1. Search for the code
+    otp_record = db.query(OTP).filter(
+        OTP.email == payload.email, 
+        OTP.code == payload.code, 
+        OTP.is_used == False
+    ).first()
+
+    if not otp_record:
+        print(f"FAILED VERIFY: No unused code {payload.code} found for {payload.email}")
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    # 2. Find and update the user
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_verified = True
+    otp_record.is_used = True
+    
+    db.commit()
+    print(f"SUCCESS: {payload.email} is now verified.")
+    return {"message": "Account verified successfully. You can now login."}
+
 
 @router.post("/auth/login", response_model=Token)
 async def login(payload: LoginRequest, db: Session = Depends(get_db)):
@@ -137,7 +170,7 @@ async def forgot_password(payload: ForgotPasswordRequest, background_tasks: Back
     db.add(new_otp)
     db.commit()
 
-    msg_content = f"Your KwachaPoint Password Reset Code is: {otp_code}"
+    msg_content = f"Your KwikPesa Password Reset Code is: {otp_code}"
     background_tasks.add_task(send_otp_email, payload.email, otp_code)
 
     return {"message": "Reset OTP sent to email."}
@@ -181,8 +214,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
 
-    # 2. Verify the merchant exists in the DB
-    query = text("SELECT id, email, business_name FROM ledger.merchants WHERE id = :uid")
+    # 2. Verify the merchant exists in the DB -- change users to merchants if it crashes --
+    query = text("SELECT id, email, business_name FROM ledger.users WHERE id = :uid")
     user = db.execute(query, {"uid": user_id}).fetchone()
     
     if user is None:
