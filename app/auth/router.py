@@ -28,31 +28,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "KWACHAPOINT_SUPER_SECRET_KEY_2026")
 ALGORITHM = "HS256"
-
-"""
-GMAIL_USER = "chikusehopeson@gmail.com"
-GMAIL_PASS = "wdaypixivcszftan"
-
-def send_otp_email(target_email: str, otp_code: str):
-    msg = EmailMessage()
-    msg.set_content(f"Your KwikPesa Verification Code is: {otp_code}\nThis code expires in 10 minutes.")
-    msg['Subject'] = "Verify Your KwikPesa Account"
-    msg['From'] = GMAIL_USER
-    msg['To'] = target_email
-
-    print(f"DEBUG: Sending OTP {otp_code} to {target_email}")
-
-    try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
-            smtp.starttls()
-            smtp.login(GMAIL_USER, GMAIL_PASS)
-            smtp.send_message(msg)
-            print("SUCCESS: Email sent successfully.")
-    except Exception as e:
-        print(f"ERROR: Failed to send email: {e}")
-"""
-
-
 resend.api_key = os.getenv("RESEND_API_KEY")
 
 def send_otp_email(target_email: str, otp_code: str):
