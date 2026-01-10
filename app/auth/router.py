@@ -111,7 +111,7 @@ async def verify_otp(email: str, code: str, db: Session = Depends(get_db)):
 
 @router.post("/auth/verify-otp")
 async def verify_otp(payload: VerifyOTPRequest, db: Session = Depends(get_db)):
-    # 1. Search for the code
+    # 1. Check if the OTP exists and is unused
     otp_record = db.query(OTP).filter(
         OTP.email == payload.email, 
         OTP.code == payload.code, 
@@ -119,21 +119,39 @@ async def verify_otp(payload: VerifyOTPRequest, db: Session = Depends(get_db)):
     ).first()
 
     if not otp_record:
-        print(f"FAILED VERIFY: No unused code {payload.code} found for {payload.email}")
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    # 2. Find and update the user
+    # 2. Find the User in ledger.users
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User account not found")
 
-    user.is_verified = True
-    otp_record.is_used = True
-    
-    db.commit()
-    print(f"SUCCESS: {payload.email} is now verified.")
-    return {"message": "Account verified successfully. You can now login."}
+    try:
+        # 3. Mark User as Verified
+        user.is_verified = True
+        otp_record.is_used = True
 
+        # 4. Create the Merchant profile in ledger.merchants
+        merchant_query = text("""
+            INSERT INTO ledger.merchants (id, email, business_name, created_at)
+            VALUES (:id, :email, :business_name, NOW())
+            ON CONFLICT (id) DO NOTHING
+        """)
+        
+        db.execute(merchant_query, {
+            "id": user.id,
+            "email": user.email,
+            "business_name": user.business_name
+        })
+
+        db.commit()
+        print(f"SUCCESS: {payload.email} verified and merchant profile created.")
+        return {"message": "Account verified successfully. You can now login."}
+
+    except Exception as e:
+        db.rollback()
+        print(f"DATABASE ERROR during verification: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during verification")
 
 @router.post("/auth/login", response_model=Token)
 async def login(payload: LoginRequest, db: Session = Depends(get_db)):
@@ -214,8 +232,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise credentials_exception
 
-    # 2. Verify the merchant exists in the DB -- change users to merchants if it crashes --
-    query = text("SELECT id, email, business_name FROM ledger.users WHERE id = :uid")
+    # 2. Verify the merchant exists in the DB -- change users to users if it crashes --
+    query = text("SELECT id, email, business_name FROM ledger.merchants WHERE id = :uid")
     user = db.execute(query, {"uid": user_id}).fetchone()
     
     if user is None:
