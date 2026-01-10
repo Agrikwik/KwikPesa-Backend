@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KwachaPoint | Secure Access</title>
+    <title>KwikPesa | Secure Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -100,7 +100,7 @@
 
             if(mode === 'login') {
                 document.getElementById('login-form').classList.remove('hidden');
-                subtitle.innerText = "Welcome back, Merchant";
+                subtitle.innerText = "Welcome back";
             } else if(mode === 'register') {
                 document.getElementById('register-form').classList.remove('hidden');
                 subtitle.innerText = "Join the KwachaPoint Network";
@@ -120,31 +120,43 @@
         document.getElementById('login-form').onsubmit = async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
-            btn.innerText = "Checking...";
+            const originalText = btn.innerText;
+            btn.innerText = "Verifying...";
+            btn.disabled = true;
             
-            const res = await fetch('/auth/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: document.getElementById('login-email').value,
-                    password: document.getElementById('login-password').value
-                })
-            });
-            
-            const data = await res.json();
-            if(res.ok) {
-                localStorage.setItem('kp_token', data.access_token);
-                // Try to get redirect URL from server, else default to dashboard
-                try {
-                    const redirectRes = await fetch('/redirect');
-                    const redirectData = await redirectRes.json();
-                    window.location.href = redirectData.redirect_url || '/dashboard';
-                } catch {
-                    window.location.href = '/dashboard';
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-password').value
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if(res.ok) {
+                    // 1. Store Token and Role (Crucial for Dashboard Security)
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('userRole', data.role); // Backend must return 'role'
+                    
+                    // 2. Immediate Role-Based Redirect
+                    if (data.role === 'admin' || data.role === 'super_admin') {
+                        window.location.href = '/admin-dashboard';
+                    } else {
+                        window.location.href = '/merchant-dashboard';
+                    }
+                } else {
+                    alert(data.detail || "Login failed. Please check your credentials.");
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                 }
-            } else {
-                alert(data.detail);
-                btn.innerText = "Sign In";
+            } catch (err) {
+                console.error("Auth Error:", err);
+                alert("Connection error. Is the Render server awake?");
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         };
 
@@ -162,8 +174,12 @@
                     business_name: document.getElementById('reg-biz').value
                 })
             });
-            if(res.ok) toggleAuth('otp');
-            else alert("Error: " + (await res.json()).detail);
+            if(res.ok) {
+                toggleAuth('otp');
+            } else {
+                const error = await res.json();
+                alert("Registration Error: " + error.detail);
+            }
         };
 
         // --- FORGOT PASSWORD LOGIC ---
@@ -176,14 +192,16 @@
                 body: JSON.stringify({ email: email })
             });
             if(res.ok) {
-                alert("Reset code sent!");
+                alert("Reset code sent to your email!");
                 toggleAuth('reset');
-            } else alert("Error sending code.");
+            } else {
+                alert("Could not process request. Check your email address.");
+            }
         };
 
         // --- RESET PASSWORD SUBMISSION ---
         async function submitNewPassword() {
-            const email = document.getElementById('forgot-email-input').value; // Retreive from the forgot input
+            const email = document.getElementById('forgot-email-input').value; 
             const res = await fetch('/auth/reset-password', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -194,20 +212,25 @@
                 })
             });
             if(res.ok) {
-                alert("Success! Password updated.");
+                alert("Success! Password updated. Please login.");
                 toggleAuth('login');
-            } else alert("Verification failed.");
+            } else {
+                alert("Verification failed. Code might be expired.");
+            }
         }
 
         // --- VERIFY ACCOUNT LOGIC ---
         async function verifyAccount() {
             const email = document.getElementById('reg-email').value;
             const code = document.getElementById('otp-code').value;
+            // Note: Changed from query param to body if your backend expects JSON
             const res = await fetch(`/auth/verify-otp?email=${email}&code=${code}`, { method: 'POST' });
             if(res.ok) {
                 alert("Verified! You can now sign in.");
                 toggleAuth('login');
-            } else alert("Invalid code.");
+            } else {
+                alert("Invalid or expired verification code.");
+            }
         }
     </script>
 </body>

@@ -126,133 +126,174 @@
             <div id="smart-result" class="hidden mt-6 p-4 bg-[#0b0e14] rounded-lg border border-gray-800 text-center"></div>
         </div>
     </div>
+<script>
 
-    <script>
-        let currentMode = 'link';
+let currentMode = 'link';
+let salesChart; // Store chart instance for updates
 
-        function logout() {
-            localStorage.removeItem('kp_token');
-            window.location.href = '/login';
-        }
-
-        function togglePaymentTool() {
-            document.getElementById('paymentToolModal').classList.toggle('hidden');
-        }
-
-        function setPayMode(mode) {
-            currentMode = mode;
-            const btn = document.getElementById('mainPayBtn');
-            const contextDiv = document.getElementById('input-context');
-            const modeLink = document.getElementById('mode-link');
-            const modeStk = document.getElementById('mode-stk');
-
-            if (mode === 'stk') {
-                contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Customer Phone</label>
-                    <input type="tel" id="pay_phone" placeholder="088/099..." class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-white mt-1">`;
-                btn.innerText = "INITIATE PIN POPUP";
-                btn.className = btn.className.replace('bg-cyan-600', 'bg-purple-600');
-                modeStk.className = "px-4 py-2 rounded text-xs font-bold bg-purple-600 text-white transition-all";
-                modeLink.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
-            } else {
-                contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Description</label>
-                    <input type="text" id="pay_desc" placeholder="Order #123" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">`;
-                btn.innerText = "GENERATE LINK";
-                btn.className = btn.className.replace('bg-purple-600', 'bg-cyan-600');
-                modeLink.className = "px-4 py-2 rounded text-xs font-bold bg-cyan-600 text-white transition-all";
-                modeStk.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
-            }
-        }
-
-        async function secureFetch(url, options = {}) {
-            const token = localStorage.getItem('access_token');
-            
-            // If no token, redirect to login immediately
-            if (!token) {
-                window.location.href = '/login';
-                return null;
+function logout() {
+    // Clear everything so the next person doesn't see your data
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('userRole');
+    window.location.href = '/login';
 }
 
-    // Prepare headers
-    const headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    };
+function togglePaymentTool() {
+    document.getElementById('paymentToolModal').classList.toggle('hidden');
+}
 
-    const response = await fetch(url, { ...options, headers });
+function setPayMode(mode) {
+    currentMode = mode;
+    const btn = document.getElementById('mainPayBtn');
+    const contextDiv = document.getElementById('input-context');
+    const modeLink = document.getElementById('mode-link');
+    const modeStk = document.getElementById('mode-stk');
 
-    // Handle the "Kicked Out" scenario (Expired or Invalid Token)
-    if (response.status === 401) {
-        console.error("Session expired or unauthorized. Redirecting...");
-        localStorage.removeItem('access_token');
+    if (mode === 'stk') {
+        contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Customer Phone</label>
+            <input type="tel" id="pay_phone" placeholder="088/099..." class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-white mt-1">`;
+        btn.innerText = "INITIATE PIN POPUP";
+        btn.className = btn.className.replace('bg-cyan-600', 'bg-purple-600');
+        modeStk.className = "px-4 py-2 rounded text-xs font-bold bg-purple-600 text-white transition-all";
+        modeLink.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
+    } else {
+        contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Description</label>
+            <input type="text" id="pay_desc" placeholder="Order #123" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">`;
+        btn.innerText = "GENERATE LINK";
+        btn.className = btn.className.replace('bg-purple-600', 'bg-cyan-600');
+        modeLink.className = "px-4 py-2 rounded text-xs font-bold bg-cyan-600 text-white transition-all";
+        modeStk.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
+    }
+}
+
+// THE CORE SECURE FETCH (Fixed for Render)
+async function secureFetch(url, options = {}) {
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
         window.location.href = '/login';
         return null;
     }
 
-    return response;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    try {
+        const response = await fetch(url, { ...options, headers });
+
+        if (response.status === 401 || response.status === 403) {
+            console.error("Session expired.");
+            localStorage.clear();
+            window.location.href = '/login';
+            return null;
+        }
+        return response;
+    } catch (err) {
+        console.error("Network Error:", err);
+        return null;
+    }
 }
 
-        // UPDATED: Includes Token for STK
-        async function initiateRemotePush(amount, phone) {
-            const response = await secureFetch('/v1/checkout/initiate-stk', {
-                method: 'POST',
-                body: JSON.stringify({ phone: phone, amount: parseFloat(amount) })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                document.getElementById('smart-result').innerHTML = `<div class="text-purple-400"><p class="font-bold">STK Push Sent!</p></div>`;
-            } else { throw new Error(data.detail); }
+// REAL STATS FETCHING
+async function fetchStats() {
+    const response = await secureFetch('/api/merchant/stats');
+    if (!response) return;
+
+    const data = await response.json();
+    
+    // Inject the real Postgres data into your HTML IDs
+    document.getElementById('balance').innerHTML = `${data.balance.toLocaleString()} <span class="text-xs">MWK</span>`;
+    document.getElementById('sales').innerHTML = `${data.sales.toLocaleString()} <span class="text-xs">MWK</span>`;
+    document.getElementById('success_rate').innerText = `${data.success_rate}%`;
+
+    // Update the chart with provider split
+    if (salesChart) {
+        salesChart.data.datasets[0].data = [data.provider_split.Airtel, data.provider_split.TNM];
+        salesChart.update();
+    }
+}
+
+async function initiateRemotePush(amount, phone) {
+    const response = await secureFetch('/v1/checkout/initiate-stk', {
+        method: 'POST',
+        body: JSON.stringify({ phone: phone, amount: parseFloat(amount) })
+    });
+    
+    if (response && response.ok) {
+        document.getElementById('smart-result').innerHTML = `<div class="text-purple-400"><p class="font-bold">STK Push Sent!</p></div>`;
+    } else {
+        const data = await response.json();
+        throw new Error(data.detail || "STK Failed");
+    }
+}
+
+async function generateLink(amount, desc) {
+    const response = await secureFetch('/api/merchant/create-link', {
+        method: 'POST',
+        body: JSON.stringify({ amount: parseFloat(amount), description: desc })
+    });
+    
+    if (response && response.ok) {
+        const data = await response.json();
+        document.getElementById('smart-result').innerHTML = `
+            <div class="text-cyan-400 p-2 font-mono text-xs break-all border border-cyan-500/20 rounded mt-2">
+                ${data.url}
+            </div>
+            <button onclick="navigator.clipboard.writeText('${data.url}')" class="text-[10px] text-gray-500 mt-1 underline">Copy Link</button>
+        `;
+    } else {
+        throw new Error("Failed to create link");
+    }
+}
+
+async function executeSmartPay() {
+    const amount = document.getElementById('pay_amount').value;
+    const btn = document.getElementById('mainPayBtn');
+    const resultDiv = document.getElementById('smart-result');
+    
+    if (!amount || amount <= 0) return alert("Please enter a valid amount");
+
+    btn.disabled = true;
+    resultDiv.classList.remove('hidden');
+    resultDiv.innerHTML = `<p class="animate-pulse text-xs">Processing via Render...</p>`;
+
+    try {
+        if (currentMode === 'link') {
+            await generateLink(amount, document.getElementById('pay_desc').value);
+        } else {
+            await initiateRemotePush(amount, document.getElementById('pay_phone').value);
         }
+    } catch (err) {
+        resultDiv.innerHTML = `<p class="text-red-400 text-xs">${err.message}</p>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
 
-        // UPDATED: Includes Token for Link
-        async function generateLink(amount, desc) {
-            const response = await secureFetch('/api/merchant/create-link', {
-                method: 'POST',
-                body: JSON.stringify({ amount: parseFloat(amount), description: desc })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                document.getElementById('smart-result').innerHTML = `<div class="text-cyan-400 p-2 font-mono text-sm">${data.url}</div>`;
-            } else { throw new Error("Failed"); }
-        }
+// --- INITIALIZATION ---
 
-        async function executeSmartPay() {
-            const amount = document.getElementById('pay_amount').value;
-            const btn = document.getElementById('mainPayBtn');
-            const resultDiv = document.getElementById('smart-result');
-            
-            btn.disabled = true;
-            resultDiv.classList.remove('hidden');
-            resultDiv.innerHTML = `<p class="animate-pulse">Authorizing...</p>`;
+// Chart Init
+const ctx = document.getElementById('salesDonut').getContext('2d');
+salesChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Airtel', 'TNM'],
+        datasets: [{
+            data: [0, 0], // Starts at zero, fetchStats updates it
+            backgroundColor: ['#22d3ee', '#a855f7'],
+            borderWidth: 0
+        }]
+    },
+    options: { cutout: '75%', plugins: { legend: { display: false } } }
+});
 
-            try {
-                if (currentMode === 'link') {
-                    await generateLink(amount, document.getElementById('pay_desc').value);
-                } else {
-                    await initiateRemotePush(amount, document.getElementById('pay_phone').value);
-                }
-            } catch (err) {
-                resultDiv.innerHTML = `<p class="text-red-400">${err.message}</p>`;
-            } finally { btn.disabled = false; }
-        }
-
-        // Chart Init
-        const ctx = document.getElementById('salesDonut').getContext('2d');
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Airtel', 'TNM'],
-                datasets: [{
-                    data: [70, 30],
-                    backgroundColor: ['#22d3ee', '#a855f7'],
-                    borderWidth: 0
-                }]
-            },
-            options: { cutout: '75%', plugins: { legend: { display: false } } }
-        });
-
-        setInterval(fetchStats, 10000);
-        fetchStats();
+// Start the loop
+setInterval(fetchStats, 10000); // 10 seconds
+fetchStats();
     </script>
+
 </body>
 </html>

@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy import Column, String, Boolean, Enum, DateTime, Numeric, Text, ForeignKey
+from sqlalchemy import Column, String, Boolean, Enum, DateTime, Numeric, Text, ForeignKey, Decimal
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
@@ -14,19 +14,23 @@ class User(Base):
     __table_args__ = {"schema": "ledger"}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    personal_phone = Column(String, nullable=False)
-
-    business_name = Column(String, nullable=True)
-    business_phone = Column(String, nullable=True)
-    business_category = Column(String, nullable=True)
-    business_address = Column(Text, nullable=True)
+    role = Column(String, default="merchant")
     
-    role = Column(Enum(UserRole), default=UserRole.MERCHANT)
     is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+    
+    business_name = Column(String)
+    business_phone = Column(String)
+    business_category = Column(String)
+    balance = Column(Decimal(20, 4), default=0.0)
+    
+    api_key_hashed = Column(String, unique=True)
+    public_key = Column(String, unique=True)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class OTP(Base):
