@@ -20,6 +20,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 import os
 from sqlalchemy import text
+import resend
 
 
 router = APIRouter()
@@ -27,6 +28,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "KWACHAPOINT_SUPER_SECRET_KEY_2026")
 ALGORITHM = "HS256"
+
+"""
 GMAIL_USER = "chikusehopeson@gmail.com"
 GMAIL_PASS = "wdaypixivcszftan"
 
@@ -47,6 +50,35 @@ def send_otp_email(target_email: str, otp_code: str):
             print("SUCCESS: Email sent successfully.")
     except Exception as e:
         print(f"ERROR: Failed to send email: {e}")
+"""
+
+
+resend.api_key = os.getenv("RESEND_API_KEY")
+
+def send_otp_email(target_email: str, otp_code: str):
+    print(f"DEBUG: Attempting to send OTP {otp_code} to {target_email} via Resend API")
+
+    try:
+        params = {
+            "from": "Kwikpesa <onboarding@resend.dev>",
+            "to": [target_email],
+            "subject": "Verify Your KwikPesa Account",
+            "html": f"""
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
+                    <h2>Verify Your Account</h2>
+                    <p>Your KwikPesa Verification Code is:</p>
+                    <h1 style="color: #2b6cb0;">{otp_code}</h1>
+                    <p>This code expires in 10 minutes.</p>
+                </div>
+            """,
+        }
+
+        email = resend.Emails.send(params)
+        print(f"SUCCESS: Email sent! ID: {email['id']}")
+        
+    except Exception as e:
+        print(f"ERROR: Resend API failed: {e}")
+
 
 @router.post("/auth/register")
 async def register_merchant(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
