@@ -26,6 +26,7 @@ class User(Base):
     business_name = Column(String)
     business_phone = Column(String)
     business_category = Column(String)
+    personal_phone = Column(String)
     balance = Column(Numeric(precision=20, scale=4), default=0.0)
     
     api_key_hashed = Column(String, unique=True)
