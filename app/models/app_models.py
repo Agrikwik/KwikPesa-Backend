@@ -20,7 +20,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     role = Column(String, default="merchant")
     
-    is_verified = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     
     business_name = Column(String)
