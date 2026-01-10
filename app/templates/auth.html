@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KwachaPoint | Secure Access</title>
+    <title>KwikPesa | Secure Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -11,7 +11,7 @@
 
     <div class="w-full max-w-md bg-[#111114] border border-gray-800 rounded-2xl p-8 shadow-2xl">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">KwachaPoint</h1>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">KwikPesa</h1>
             <p class="text-gray-500 text-sm mt-2" id="auth-subtitle">Welcome back, Merchant</p>
         </div>
 
@@ -183,7 +183,7 @@
 
         // --- RESET PASSWORD SUBMISSION ---
         async function submitNewPassword() {
-            const email = document.getElementById('forgot-email-input').value; // Retreive from the forgot input
+            const email = document.getElementById('forgot-email-input').value;
             const res = await fetch('/auth/reset-password', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},

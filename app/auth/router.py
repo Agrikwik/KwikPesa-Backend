@@ -28,9 +28,16 @@ def send_otp_email(target_email: str, otp_code: str):
     msg['From'] = GMAIL_USER
     msg['To'] = target_email
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(GMAIL_USER, GMAIL_PASS)
-        smtp.send_message(msg)
+    print(f"DEBUG: Sending OTP {otp_code} to {target_email}")
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+            smtp.starttls()
+            smtp.login(GMAIL_USER, GMAIL_PASS)
+            smtp.send_message(msg)
+            print("SUCCESS: Email sent successfully.")
+    except Exception as e:
+        print(f"ERROR: Failed to send email: {e}")
 
 @router.post("/auth/register")
 async def register_merchant(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
