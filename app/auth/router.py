@@ -1,3 +1,12 @@
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    class About:
+        __version__ = bcrypt.__version__
+    bcrypt.__about__ = About()
+
+# Now the rest of your imports
+from passlib.context import CryptContext
+
 import random
 import smtplib
 from email.message import EmailMessage
@@ -23,8 +32,8 @@ GMAIL_PASS = "wdaypixivcszftan"
 
 def send_otp_email(target_email: str, otp_code: str):
     msg = EmailMessage()
-    msg.set_content(f"Your KwachaPoint Verification Code is: {otp_code}\nThis code expires in 10 minutes.")
-    msg['Subject'] = "Verify Your KwachaPoint Account"
+    msg.set_content(f"Your KwikPesa Verification Code is: {otp_code}\nThis code expires in 10 minutes.")
+    msg['Subject'] = "Verify Your KwikPesa Account"
     msg['From'] = GMAIL_USER
     msg['To'] = target_email
 
