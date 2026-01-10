@@ -2,7 +2,8 @@ import enum
 import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import Column, String, Boolean, Enum, DateTime, Numeric, Text, ForeignKey
-from decimal import Decimal
+import datetime
+from decimal import Decimal as PyDecimal
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
@@ -26,7 +27,7 @@ class User(Base):
     business_name = Column(String)
     business_phone = Column(String)
     business_category = Column(String)
-    balance = Column(Decimal(20, 4), default=0.0)
+    balance = Column(Numeric(precision=20, scale=4), default=0.0)
     
     api_key_hashed = Column(String, unique=True)
     public_key = Column(String, unique=True)
