@@ -69,7 +69,7 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
         business_phone=user_data.business_phone,
         business_category=user_data.business_category,
         role="merchant",
-        is_verified=False
+        is_verified=True
     )
     db.add(new_user)
     
@@ -103,8 +103,8 @@ async def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    if not user.is_verified:
-        raise HTTPException(status_code=403, detail="Please verify your email first.")
+    # if not user.is_verified:
+       # raise HTTPException(status_code=403, detail="Please verify your email first.")
 
     access_token = create_access_token(data={
         "sub": user.email, 
