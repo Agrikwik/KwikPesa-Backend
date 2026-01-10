@@ -1,8 +1,7 @@
 import enum
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import Column, String, Boolean, Enum, DateTime, Numeric, Text, ForeignKey
-import datetime
 from decimal import Decimal as PyDecimal
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
@@ -56,4 +55,4 @@ class PaymentLink(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     description = Column(Text)
     status = Column(String(20), default="ACTIVE")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
