@@ -31,7 +31,7 @@ class User(Base):
     api_key_hashed = Column(String, unique=True)
     public_key = Column(String, unique=True)
     
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class OTP(Base):
@@ -42,7 +42,7 @@ class OTP(Base):
     email = Column(String, index=True, nullable=False)
     code = Column(String(6), nullable=False)
     purpose = Column(String, default="registration") 
-    expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(minutes=10))
+    expires_at = Column(DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(minutes=10))
     is_used = Column(Boolean, default=False)
 
 class PaymentLink(Base):
@@ -55,4 +55,4 @@ class PaymentLink(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     description = Column(Text)
     status = Column(String(20), default="ACTIVE")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
