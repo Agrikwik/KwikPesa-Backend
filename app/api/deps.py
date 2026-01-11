@@ -19,6 +19,15 @@ def get_db() -> Generator:
     finally:
         db.close()
 
+async def get_current_user(db: Session = Depends(get_db)) -> User:
+    user = db.query(User).first() 
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="No users found in database. Create one first!")
+        
+    return user
+
+"""
 async def get_current_user(
     token: str = Depends(oauth2_scheme), 
     db: Session = Depends(get_db)
@@ -48,3 +57,5 @@ async def get_current_user(
         raise HTTPException(status_code=400, detail="Inactive user")
         
     return user
+
+"""
