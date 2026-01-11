@@ -10,9 +10,6 @@ env.bak/
 venv.bak/
 .venv
 database.ini
-secrets.json
-*.sql
-*.sqlite3
 pg_data/
 postgres_data/
 .vscode/

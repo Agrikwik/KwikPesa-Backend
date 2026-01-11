@@ -15,8 +15,6 @@ class PaymentLinkRequest(BaseModel):
     amount: float
     description: str
 
-
-
 @router.post("/api/merchant/create-link")
 async def create_link(
     data: PaymentLinkRequest,

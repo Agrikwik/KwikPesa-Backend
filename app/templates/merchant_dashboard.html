@@ -129,10 +129,9 @@
 <script>
 
 let currentMode = 'link';
-let salesChart; // Store chart instance for updates
+let salesChart;
 
 function logout() {
-    // Clear everything so the next person doesn't see your data
     localStorage.removeItem('kp_token');
     localStorage.removeItem('userRole');
     window.location.href = '/login';
@@ -158,7 +157,7 @@ function setPayMode(mode) {
         modeLink.className = "px-4 py-2 rounded text-xs font-bold text-gray-500 transition-all";
     } else {
         contextDiv.innerHTML = `<label class="text-xs text-gray-500 uppercase">Description</label>
-            <input type="text" id="pay_desc" placeholder="Order #123" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">`;
+            <input type="text" id="pay_desc" placeholder="Order Name" class="w-full bg-[#0b0e14] border border-gray-700 p-3 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none text-white mt-1">`;
         btn.innerText = "GENERATE LINK";
         btn.className = btn.className.replace('bg-purple-600', 'bg-cyan-600');
         modeLink.className = "px-4 py-2 rounded text-xs font-bold bg-cyan-600 text-white transition-all";
@@ -166,19 +165,17 @@ function setPayMode(mode) {
     }
 }
 
-// REAL STATS FETCHING
+// STATS FETCHING
 async function fetchStats() {
     const response = await secureFetch('/api/merchant/stats');
     if (!response) return;
 
     const data = await response.json();
     
-    // Inject the real Postgres data into your HTML IDs
     document.getElementById('balance').innerHTML = `${data.balance.toLocaleString()} <span class="text-xs">MWK</span>`;
     document.getElementById('sales').innerHTML = `${data.sales.toLocaleString()} <span class="text-xs">MWK</span>`;
     document.getElementById('success_rate').innerText = `${data.success_rate}%`;
 
-    // Update the chart with provider split
     if (salesChart) {
         salesChart.data.datasets[0].data = [data.provider_split.Airtel, data.provider_split.TNM];
         salesChart.update();
@@ -203,15 +200,11 @@ async function generateLink(amount, desc) {
     try {
         const response = await secureFetch('/api/merchant/create-link', {
             method: 'POST',
-            // Headers are likely handled inside your 'secureFetch', 
-            // but ensure 'Content-Type': 'application/json' is there!
             body: JSON.stringify({ 
                 amount: parseFloat(amount), 
                 description: desc 
             })
         });
-
-        // Check if response exists and is successful (status 200-299)
         if (response && response.ok) {
             const data = await response.json();
             document.getElementById('smart-result').innerHTML = `
@@ -221,7 +214,6 @@ async function generateLink(amount, desc) {
                 <button onclick="navigator.clipboard.writeText('${data.url}')" class="text-[10px] text-gray-500 mt-1 underline">Copy Link</button>
             `;
         } else {
-            // Handle specific error messages from the server if possible
             const errorData = response ? await response.json() : { detail: "Network error" };
             throw new Error(errorData.detail || "Failed to create link");
         }
@@ -256,16 +248,14 @@ async function executeSmartPay() {
     }
 }
 
-// --- INITIALIZATION ---
 
-// Chart Init
 const ctx = document.getElementById('salesDonut').getContext('2d');
 salesChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
         labels: ['Airtel', 'TNM'],
         datasets: [{
-            data: [0, 0], // Starts at zero, fetchStats updates it
+            data: [0, 0],
             backgroundColor: ['#22d3ee', '#a855f7'],
             borderWidth: 0
         }]
@@ -273,8 +263,7 @@ salesChart = new Chart(ctx, {
     options: { cutout: '75%', plugins: { legend: { display: false } } }
 });
 
-// Start the loop
-setInterval(fetchStats, 10000); // 10 seconds
+setInterval(fetchStats, 30000); // 30 seconds
 fetchStats();
     </script>
 
