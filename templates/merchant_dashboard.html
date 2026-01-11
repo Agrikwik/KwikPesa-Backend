@@ -231,23 +231,37 @@ async function initiateRemotePush(amount, phone) {
 }
 
 async function generateLink(amount, desc) {
-    const response = await secureFetch('/api/merchant/create-link', {
-        method: 'POST',
-        body: JSON.stringify({ amount: parseFloat(amount), description: desc })
-    });
-    
-    if (response && response.ok) {
-        const data = await response.json();
-        document.getElementById('smart-result').innerHTML = `
-            <div class="text-cyan-400 p-2 font-mono text-xs break-all border border-cyan-500/20 rounded mt-2">
-                ${data.url}
-            </div>
-            <button onclick="navigator.clipboard.writeText('${data.url}')" class="text-[10px] text-gray-500 mt-1 underline">Copy Link</button>
-        `;
-    } else {
-        throw new Error("Failed to create link");
+    try {
+        const response = await secureFetch('/api/merchant/create-link', {
+            method: 'POST',
+            // Headers are likely handled inside your 'secureFetch', 
+            // but ensure 'Content-Type': 'application/json' is there!
+            body: JSON.stringify({ 
+                amount: parseFloat(amount), 
+                description: desc 
+            })
+        });
+
+        // Check if response exists and is successful (status 200-299)
+        if (response && response.ok) {
+            const data = await response.json();
+            document.getElementById('smart-result').innerHTML = `
+                <div class="text-cyan-400 p-2 font-mono text-xs break-all border border-cyan-500/20 rounded mt-2">
+                    ${data.url}
+                </div>
+                <button onclick="navigator.clipboard.writeText('${data.url}')" class="text-[10px] text-gray-500 mt-1 underline">Copy Link</button>
+            `;
+        } else {
+            // Handle specific error messages from the server if possible
+            const errorData = response ? await response.json() : { detail: "Network error" };
+            throw new Error(errorData.detail || "Failed to create link");
+        }
+    } catch (err) {
+        console.error("Link Generation Error:", err);
+        throw err; // Re-throw so executeSmartPay can show the error in the UI
     }
 }
+
 
 async function executeSmartPay() {
     const amount = document.getElementById('pay_amount').value;

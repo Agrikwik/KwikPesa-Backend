@@ -71,7 +71,7 @@ async def public_checkout_page(short_code: str, request: Request, db: Session = 
     query = text("""
         SELECT l.amount, l.description, l.status, m.business_name as merchant_name
         FROM ledger.payment_links l
-        JOIN ledger.merchants m ON l.merchant_id = m.id
+        JOIN ledger.users m ON l.merchant_id = m.id
         WHERE l.short_code = :code
     """)
     link = db.execute(query, {"code": short_code}).fetchone()
