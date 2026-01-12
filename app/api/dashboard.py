@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import secrets
@@ -117,3 +118,52 @@ async def create_payment_link(
     db.commit()
     
     return {"url": f"https://kwikpesa.onrender.com/pay/{short_code}"}
+
+@router.get("/pay/{short_code}", response_class=HTMLResponse)
+async def checkout_page(short_code: str, db: Session = Depends(get_db)):
+    # 1. Look up the link details from the DB
+    link = db.execute(text("SELECT * FROM ledger.payment_links WHERE short_code = :c"), {"c": short_code}).fetchone()
+    
+    if not link:
+        return "<h1>Link Not Found</h1>"
+
+    # 2. Return a simple, mobile-friendly HTML page
+    return f"""
+    <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body {{ font-family: sans-serif; text-align: center; padding: 20px; }}
+                .card {{ border: 1px solid #ddd; padding: 20px; border-radius: 10px; }}
+                button {{ background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>KwikPesa Checkout</h2>
+                <p>Paying: <b>MK {link.amount}</b></p>
+                <p>For: {link.description}</p>
+                <input type="tel" id="phone" placeholder="099... or 088..." style="padding:10px; width:100%; margin-bottom:10px;"><br>
+                <button onclick="payNow()">Pay Now</button>
+            </div>
+
+            <script>
+                async function payNow() {{
+                    const phone = document.getElementById('phone').value;
+                    // Trigger your existing STK Push endpoint
+                    const res = await fetch('/api/v1/payments/initiate-push', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}},
+                        body: JSON.stringify({{ phone: phone, amount: {link.amount} }})
+                    }});
+                    
+                    if (res.ok) {{
+                        alert('Check your phone for the PIN prompt!');
+                        // Tell the marketplace we are done (Optional: use window.postMessage)
+                        window.parent.postMessage('payment_initiated', '*');
+                    }}
+                }}
+            </script>
+        </body>
+    </html>
+    """
