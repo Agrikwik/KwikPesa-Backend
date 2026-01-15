@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from fastapi.middleware.cors import CORSMiddleware
 
 # Internal Imports
 from app.api.deps import get_db
@@ -14,34 +15,38 @@ from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
 from app.core.database import engine, Base
 
-# --- DATABASE INITIALIZATION ---
 def init_db():
     with engine.connect() as connection:
-        # Create the schema first!
         connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
         connection.commit()
-    # Now it is safe to create the tables
     Base.metadata.create_all(bind=engine)
 
-# Run the initialization BEFORE creating the FastAPI app instance
 init_db()
 
-app = FastAPI(title="KwachaPoint Payment Gateway", version="1.0.0")
+app = FastAPI(title="KwikPesa Payment Gateway", version="1.0.0")
 
-# Setup Static Files & Templates
+origins = [
+    "https://kwikpesa-k3vi.onrender.com",
+    "http://localhost:5173",                   # for local testing
+]
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Ensure your static and templates folders are in the root directory
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
-# Include Routers
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(checkout_router, prefix="/v1/checkout", tags=["Checkout"])
 app.include_router(webhook_router, prefix="/v1/webhooks", tags=["Webhooks"])
 app.include_router(dashboard_router, tags=["Admin"])
 app.include_router(dashboard_router, prefix="/api/merchant", tags=["Dashboard"])
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
