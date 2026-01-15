@@ -1,11 +1,9 @@
 import os
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from fastapi.middleware.cors import CORSMiddleware
 
 # Internal Imports
 from app.api.deps import get_db
@@ -15,6 +13,7 @@ from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
 from app.core.database import engine, Base
 
+# Initialize database schema
 def init_db():
     with engine.connect() as connection:
         connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
@@ -25,20 +24,12 @@ init_db()
 
 app = FastAPI(title="KwikPesa Payment Gateway", version="1.0.0")
 
+# --- CORS CONFIGURATION ---
+# Replace the first URL with your actual live React URL from Render
 origins = [
-    "https://kwikpesa-k3vi.onrender.com",
-    "http://localhost:5173",                   # for local testing
+    "https://kwikpesa-k3vi.onrender.com",  
+    "http://localhost:5173",               # Standard Vite dev port
 ]
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
-
-app.include_router(auth_router, tags=["Authentication"])
-app.include_router(checkout_router, prefix="/v1/checkout", tags=["Checkout"])
-app.include_router(webhook_router, prefix="/v1/webhooks", tags=["Webhooks"])
-app.include_router(dashboard_router, tags=["Admin"])
-app.include_router(dashboard_router, prefix="/api/merchant", tags=["Dashboard"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,31 +39,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/", response_class=HTMLResponse)
-async def landing_page(request: Request):
-    return templates.TemplateResponse("auth.html", {"request": request})
+# --- API ROUTERS ---
+app.include_router(auth_router, tags=["Authentication"])
+app.include_router(checkout_router, prefix="/v1/checkout", tags=["Checkout"])
+app.include_router(webhook_router, prefix="/v1/webhooks", tags=["Webhooks"])
+# Dashboard routes for React frontend to consume
+app.include_router(dashboard_router, prefix="/api/merchant", tags=["Merchant Dashboard"])
 
-@app.get("/admin", response_class=HTMLResponse)
-async def read_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+# --- ROOT REDIRECT ---
+@app.get("/")
+async def root():
+    """Redirects API visitors to the main React frontend."""
+    return RedirectResponse(url="https://kwikpesa-k3vi.onrender.com")
 
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("auth.html", {"request": request})
-
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard_page(request: Request):
-    return templates.TemplateResponse("merchant_dashboard.html", {"request": request})
-
-@app.get("/redirect")
-async def auth_redirect_handler():
-    return JSONResponse(content={"redirect_url": "/dashboard"})
-
-# --- PAYMENT LINK HANDLER ---
+# --- PUBLIC CHECKOUT PAGE ---
+from fastapi.templating import Jinja2Templates
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 @app.get("/pay/{short_code}", response_class=HTMLResponse)
 async def public_checkout_page(short_code: str, request: Request, db: Session = Depends(get_db)):
-    # Using a robust query to fetch link details
     query = text("""
         SELECT l.amount, l.description, l.status, m.business_name as merchant_name
         FROM ledger.payment_links l
@@ -95,10 +81,10 @@ async def public_checkout_page(short_code: str, request: Request, db: Session = 
         "short_code": short_code
     })
 
-# --- ERROR HANDLERS ---
+# --- GLOBAL ERROR HANDLER ---
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=404, 
-        content={"message": "The page or endpoint you are looking for does not exist."}
+        content={"message": "API endpoint not found. Visit /docs for documentation."}
     )

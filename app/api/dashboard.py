@@ -119,7 +119,7 @@ async def create_payment_link(
     
     return {"url": f"https://kwikpesa.onrender.com/pay/{short_code}"}
 
-@router.get("/pay/{short_code}", response_class=HTMLResponse)
+@router.get("/payment/{short_code}", response_class=HTMLResponse)
 async def checkout_page(short_code: str, db: Session = Depends(get_db)):
     # 1. Look up the link details from the DB
     link = db.execute(text("SELECT * FROM ledger.payment_links WHERE short_code = :c"), {"c": short_code}).fetchone()
