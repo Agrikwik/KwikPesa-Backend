@@ -27,7 +27,7 @@ def send_otp_email(target_email: str, otp_code: str, subject: str):
     """Sends a branded HTML email via Resend."""
     try:
         resend.Emails.send({
-            "from": "KwikPesa <chikusehopeson@gmail.com>", # Update this after domain verification
+            "from": "KwikPesa <onboarding@resend.dev>", # Update this after domain verification
             "to": [target_email],
             "subject": subject,
             "html": f"""
