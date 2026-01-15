@@ -12,7 +12,7 @@ from jose import JWTError, jwt
 from app.api.deps import get_db
 from app.models.app_models import User, OTP
 from app.models.auth_utils import verify_password, create_access_token, hash_password
-from .schemas import UserCreate, LoginRequest, Token, VerifyOTPRequest
+from .schemas import UserCreate, LoginRequest, Token, VerifyOTPRequest, ForgotPasswordRequest, ResetPasswordSubmit
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
