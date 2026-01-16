@@ -7,8 +7,6 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from jose import JWTError, jwt
-
-# Internal Imports
 from app.api.deps import get_db
 from app.models.app_models import User, OTP
 from app.models.auth_utils import verify_password, create_access_token, hash_password
@@ -17,12 +15,10 @@ from .schemas import UserCreate, LoginRequest, Token, VerifyOTPRequest, ForgotPa
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Environment Variables
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 resend.api_key = os.getenv("RESEND_API_KEY")
 
-# --- EMAIL LOGIC ---
 def send_otp_email(target_email: str, otp_code: str, subject: str):
     """Sends a branded HTML email via Resend."""
     try:
@@ -47,15 +43,11 @@ def send_otp_email(target_email: str, otp_code: str, subject: str):
     except Exception as e:
         print(f"CRITICAL ERROR: Failed to send email to {target_email}: {e}")
 
-# --- ROUTES ---
-
 @router.post("/auth/register")
 async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # 1. Prevent duplicate emails
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # 2. Create unverified user
     new_user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password),
@@ -69,13 +61,11 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
     )
     db.add(new_user)
     
-    # 3. Generate OTP
     otp_code = f"{random.randint(100000, 999999)}"
     db.add(OTP(email=user_data.email, code=otp_code))
     
     db.commit()
     
-    # 4. Background Email
     background_tasks.add_task(send_otp_email, user_data.email, otp_code, "Welcome to KwikPesa - Verify Your Account")
     
     return {"message": "Registration successful. OTP sent.", "email": user_data.email}
@@ -87,10 +77,8 @@ async def login(payload: LoginRequest, background_tasks: BackgroundTasks, db: Se
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Generate Login OTP
     otp_code = f"{random.randint(100000, 999999)}"
     
-    # Clear old OTPs for this user and save new one
     db.query(OTP).filter(OTP.email == user.email).delete()
     db.add(OTP(email=user.email, code=otp_code))
     db.commit()
@@ -112,12 +100,10 @@ async def verify_otp_login(payload: VerifyOTPRequest, db: Session = Depends(get_
 
     user = db.query(User).filter(User.email == payload.email).first()
     
-    # Successful verification
     otp_record.is_used = True
     user.is_verified = True 
     db.commit()
 
-    # Issue JWT Token
     access_token = create_access_token(data={
         "sub": user.email, 
         "role": user.role,
@@ -130,12 +116,10 @@ async def verify_otp_login(payload: VerifyOTPRequest, db: Session = Depends(get_
 async def forgot_password(payload: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
-        # For security, don't confirm if email exists or not
         return {"message": "If this email exists, a reset code has been sent."}
 
     otp_code = f"{random.randint(100000, 999999)}"
     
-    # Update or create OTP record
     db.query(OTP).filter(OTP.email == user.email).delete()
     db.add(OTP(email=user.email, code=otp_code))
     db.commit()
@@ -159,7 +143,6 @@ async def reset_password(payload: ResetPasswordSubmit, db: Session = Depends(get
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Update password and mark OTP as used
     user.password_hash = hash_password(payload.new_password)
     otp_record.is_used = True
     db.commit()
@@ -169,7 +152,6 @@ async def reset_password(payload: ResetPasswordSubmit, db: Session = Depends(get
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        # Decode the JWT token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("user_id")
         
@@ -179,7 +161,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
 
-    # Fetch user from DB
     user = db.query(User).filter(User.id == user_id).first()
     
     if not user:

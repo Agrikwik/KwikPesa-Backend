@@ -28,4 +28,4 @@ class ResetPasswordSubmit(BaseModel):
 
 class VerifyOTPRequest(BaseModel):
     email: EmailStr
-    otp_code: str
+    code: str
