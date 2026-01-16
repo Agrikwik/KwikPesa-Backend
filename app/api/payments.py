@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from decimal import Decimal
 from typing import Optional
 import uuid
+from sqlalchemy import text
 
 from app.core.fastapi_security import validate_api_key
 from app.db.session import SessionLocal
@@ -53,3 +54,23 @@ async def initiate_payment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="Gateway processing error"
         )
+
+@router.get("/status/{tx_ref}")
+async def get_payment_status(
+    tx_ref: str, 
+    db: Session = Depends(get_db),
+    merchant_data: any = Depends(validate_api_key)
+):
+    query = text("""
+        SELECT status FROM ledger.transactions 
+        WHERE id = :id AND merchant_id = :mid
+    """)
+    result = db.execute(query, {"id": tx_ref, "mid": merchant_data.id}).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    return {
+        "tx_ref": tx_ref,
+        "status": result.status
+    }
