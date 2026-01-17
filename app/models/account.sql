@@ -1,10 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TYPE account_type AS ENUM ('MERCHANT', 'TREASURY', 'FEE_COLLECTION', 'PROVIDER_SETTLEMENT');
 
--- 1. clean up the old tables
-DROP TABLE IF EXISTS ledger.merchants CASCADE;
-DROP TABLE IF EXISTS ledger.users CASCADE;
-
 -- 2. Create the unified table
 CREATE TABLE ledger.users (
     id UUID PRIMARY KEY,
@@ -85,8 +81,22 @@ CREATE TABLE ledger.otps (
     is_used BOOLEAN DEFAULT FALSE
 );
 
+-- Create the Products table
+CREATE TABLE IF NOT EXISTS ledger.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    image_url TEXT, 
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 
 --  Performance Indexes
 CREATE INDEX idx_ledger_transaction_id ON ledger.ledger_entries(transaction_id);
 CREATE INDEX idx_ledger_account_id ON ledger.ledger_entries(account_id);
 CREATE INDEX idx_tx_merchant_id ON ledger.transactions(merchant_id);
+CREATE INDEX idx_products_merchant ON ledger.products(merchant_id);
