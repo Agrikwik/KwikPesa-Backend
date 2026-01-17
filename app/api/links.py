@@ -37,3 +37,28 @@ async def create_link(
     db.commit()
     
     return {"url": f"https://kwikpesa.onrender.com/pay/{code}"}
+
+@router.get("/api/merchant/my-links")
+async def get_my_links(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = text("""
+        SELECT short_code, amount, description, created_at 
+        FROM ledger.payment_links 
+        WHERE merchant_id = :mid
+        ORDER BY created_at DESC
+    """)
+    
+    result = db.execute(query, {"mid": current_user.id}).fetchall()
+    links = [
+        {
+            "short_code": row.short_code,
+            "amount": float(row.amount),
+            "description": row.description,
+            "created_at": row.created_at.isoformat() if row.created_at else None
+        } 
+        for row in result
+    ]
+    
+    return links
