@@ -12,8 +12,8 @@ from app.api.checkout import router as checkout_router
 from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
 from app.core.database import engine, Base
+from app.api import links, store
 
-# Initialize database schema
 def init_db():
     with engine.connect() as connection:
         connection.execute(text("CREATE SCHEMA IF NOT EXISTS ledger"))
@@ -43,8 +43,15 @@ app.add_middleware(
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(checkout_router, prefix="/v1/checkout", tags=["Checkout"])
 app.include_router(webhook_router, prefix="/v1/webhooks", tags=["Webhooks"])
-# Dashboard routes for React frontend to consume
 app.include_router(dashboard_router, prefix="/api/merchant", tags=["Merchant Dashboard"])
+app.include_router(
+    links.router, 
+    tags=["Payments"]
+)
+app.include_router(
+    store.router, 
+    tags=["Store"]
+)
 
 # --- ROOT REDIRECT ---
 @app.get("/")
