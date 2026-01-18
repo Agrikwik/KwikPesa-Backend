@@ -46,7 +46,7 @@ CREATE TABLE ledger.transactions (
     status VARCHAR(20) DEFAULT 'PENDING',
     provider_reference VARCHAR(255),
     idempotency_key VARCHAR(255) UNIQUE,
-    metadata JSONB,
+    metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS ledger.products (
 
 
 --  Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_transactions_metadata ON ledger.transactions USING gin (metadata);
 CREATE INDEX idx_ledger_transaction_id ON ledger.ledger_entries(transaction_id);
 CREATE INDEX idx_ledger_account_id ON ledger.ledger_entries(account_id);
 CREATE INDEX idx_tx_merchant_id ON ledger.transactions(merchant_id);
