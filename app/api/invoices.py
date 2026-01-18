@@ -68,3 +68,12 @@ def create_invoice(data: dict, db: Session = Depends(deps.get_db), current_user:
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.patch("/{invoice_id}/pay")
+def mark_invoice_as_paid(invoice_id: str, db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
+    db.execute(
+        "UPDATE ledger.invoices SET status = 'paid' WHERE id = :id AND merchant_id = :mid",
+        {"id": invoice_id, "mid": current_user.id}
+    )
+    db.commit()
+    return {"message": "Invoice marked as paid"}
