@@ -5,7 +5,7 @@ from app.models.app_models import User
 import uuid
 from fpdf import FPDF
 
-router = APIRouter(prefix="/api/invoices", tags=["Invoices"])
+router = APIRouter(prefix="/api/invoices", tags=["Invoice"])
 
 @router.get("/dashboard-stats")
 def get_invoice_stats(db: Session = Depends(deps.get_db), current_user: User = Depends(deps.get_current_user)):
