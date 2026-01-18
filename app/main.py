@@ -53,7 +53,10 @@ app.include_router(
     store.router, 
     tags=["Store"]
 )
-app.include_router(invoices.router)
+app.include_router(
+    invoices.router,
+    tags=["Invoice"]
+)
 
 # --- ROOT REDIRECT ---
 @app.get("/")
