@@ -94,6 +94,31 @@ CREATE TABLE IF NOT EXISTS ledger.products (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- The Main Invoice Table
+CREATE TABLE IF NOT EXISTS ledger.invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id UUID NOT NULL REFERENCES ledger.users(id),
+    invoice_number TEXT NOT NULL,
+    client_name TEXT NOT NULL,
+    client_email TEXT,
+    client_phone TEXT,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    notes TEXT,
+    total_amount DECIMAL(12, 2) DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- The Individual Items on an Invoice
+CREATE TABLE IF NOT EXISTS ledger.invoice_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_id UUID REFERENCES ledger.invoices(id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    quantity DECIMAL(12, 2) NOT NULL,
+    rate DECIMAL(12, 2) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL
+);
 
 --  Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_metadata ON ledger.transactions USING gin (metadata);
