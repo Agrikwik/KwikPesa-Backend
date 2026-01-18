@@ -43,9 +43,14 @@ def get_invoice_stats(db: Session = Depends(deps.get_db), current_user: User = D
             "issue_date": str(row.issue_date)
         } for row in result
     ]
-    
     return {
-        "stats": stats, # Ensure stats is also a dict
+        "stats": {
+            "total_invoiced": float(stats.total_invoiced),
+            "paid_count": stats.paid_count,
+            "paid_amount": float(stats.paid_amount),
+            "pending_count": stats.pending_count,
+            "pending_amount": float(stats.pending_amount)
+        },
         "invoices": invoices_list
     }
 
