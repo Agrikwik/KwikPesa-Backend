@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.api import deps
-from app.models.models import User
+from app.models.app_models import User
 import uuid
 from fpdf import FPDF
 
