@@ -24,6 +24,7 @@ fastapi==0.115.14
 fastapi-cli==0.0.20
 fastapi-cloud-cli==0.8.0
 fastar==0.8.0
+fpdf2==2.8.5
 Flask==3.1.2
 flask-cors==6.0.2
 Flask-JWT-Extended==4.7.1
