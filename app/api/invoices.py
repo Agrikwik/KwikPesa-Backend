@@ -19,17 +19,34 @@ def get_invoice_stats(db: Session = Depends(deps.get_db), current_user: User = D
         FROM ledger.invoices 
         WHERE merchant_id = :mid
     """, {"mid": current_user.id}).fetchone()
-    
-    invoices = db.execute("""
-        SELECT id, invoice_number, client_name, total_amount, status, issue_date 
+
+    result = db.execute("""
+        SELECT 
+            id, 
+            invoice_number, 
+            client_name, 
+            total_amount, 
+            status, 
+            issue_date 
         FROM ledger.invoices 
         WHERE merchant_id = :mid 
         ORDER BY created_at DESC
     """, {"mid": current_user.id}).fetchall()
     
+    invoices_list = [
+        {
+            "id": str(row.id),
+            "invoice_number": row.invoice_number,
+            "client_name": row.client_name,
+            "total_amount": float(row.total_amount),
+            "status": row.status,
+            "issue_date": str(row.issue_date)
+        } for row in result
+    ]
+    
     return {
-        "stats": stats,
-        "invoices": invoices
+        "stats": stats, # Ensure stats is also a dict
+        "invoices": invoices_list
     }
 
 @router.post("/create")
