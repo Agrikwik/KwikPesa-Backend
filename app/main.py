@@ -13,6 +13,7 @@ from app.api.dashboard import router as dashboard_router
 from app.auth.router import router as auth_router
 from app.core.database import engine, Base
 from app.api import links, store
+from app.api import invoices
 
 def init_db():
     with engine.connect() as connection:
@@ -52,6 +53,7 @@ app.include_router(
     store.router, 
     tags=["Store"]
 )
+app.include_router(invoices.router)
 
 # --- ROOT REDIRECT ---
 @app.get("/")
